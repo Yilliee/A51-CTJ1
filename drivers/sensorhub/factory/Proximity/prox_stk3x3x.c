@@ -165,7 +165,7 @@ ssize_t get_proximity_stk3x3x_trim_value(struct ssp_data *data, char *buf)
 	}
 
 
-	if (data->sensor_probe_state == 0 || data->is_reset_started == true) {
+	if (data->sensor_probe_state == 0 || is_sensorhub_working(data)) {
 		return FAIL;
 	}
 

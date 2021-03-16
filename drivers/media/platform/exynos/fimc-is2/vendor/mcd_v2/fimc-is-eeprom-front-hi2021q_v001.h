@@ -2,7 +2,6 @@
 #define FIMC_IS_EEPROM_FRONT_HI2021Q_V001_H
 
 /* Reference File
- --  Universal EEPROM map data V001_20191212_for M21_2019_Ramen_(Hi2021Q_20M_Front)
  */
 
 #define FIMC_IS_FRONT_MAX_CAL_SIZE (8 * 1024)

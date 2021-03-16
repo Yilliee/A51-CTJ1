@@ -42,6 +42,11 @@
 #define SSP2AP_CALLSTACK           0x0F
 #define SSP2AP_SYSTEM_INFO         0x31
 
+typedef enum _hub_req_reset_type{
+    HUB_RESET_REQ_NO_EVENT = 0x1a,
+} hub_req_reset_type;
+
+
 #define U64_US2NS 1000ULL
 
 #define SSP_TIMESTAMP_SYNC_TIMER_SEC     (30 * HZ)
@@ -72,11 +77,11 @@ void get_timestamp(struct ssp_data *data, char *dataframe,
 	if (timestamp_ns > current_timestamp) {
 		//ssp_infof("future timestamp(%d) : last = %lld, cur = %lld", type, data->latest_timestamp[type], current_timestamp);
 		timestamp_ns = current_timestamp;
-	} 
+	}
 	event->timestamp = timestamp_ns;
         data->buf[type].timestamp = event->timestamp;
 	data->latest_timestamp[type] = current_timestamp;
-	
+
 	*ptr_data += 8;
 }
 
@@ -122,13 +127,12 @@ void show_system_info(char *dataframe, int *idx)
 	sensor_debug_info *info = 0;
 	system_debug_info *s_info = 0;
 	int count = *dataframe;
-    int i = 0;
 
 	++dataframe;
 	*idx += (1 + sizeof(sensor_debug_info) * count + sizeof(system_debug_info));
 
 	ssp_info("==system info ===");
-	for (i = 0; i < count; ++i) {
+	for (int i = 0; i < count; ++i) {
 		info = (sensor_debug_info *)dataframe;
 		ssp_info("id(%d), total(%d), external(%d), e_sampling(%d), e_report(%d), fastest(%d)",
 				info->uid, info->total_count, info->ext_client, info->ext_sampling, info->ext_report, info->fastest_sampling);
@@ -218,14 +222,15 @@ int parse_dataframe(struct ssp_data *data, char *dataframe, int frame_len)
 				ssp_infof("skip reset msg");
 			}
 			break;
-#if 0
 		case SSP2AP_REQ_RESET:
-			ssp_infof("HUB reqeust Reset");
-			if (data->is_probe_done == true) {				
-				recovery_mcu(data);
+			{
+				int reset_type = dataframe[index++];
+				//if (reset_type == HUB_RESET_REQ_NO_EVENT) {
+					ssp_infof("Hub request reset[0x%x] No Event type %d",reset_type, dataframe[index++]);
+					reset_mcu(data, RESET_TYPE_HUB_NO_EVENT);
+				//}
 			}
 			break;
-#endif
 #ifdef CONFIG_SENSORS_SSP_GYROSCOPE
 		case SSP2AP_GYRO_CAL:
 			{

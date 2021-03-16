@@ -639,9 +639,7 @@ int muic_sysfs_init(struct muic_platform_data *muic_pdata)
 {
 	int ret;
 	/* create sysfs group */
-#if (0)  //IS_ENABLED(CONFIG_SEC_FACTORY)
 	muic_pdata->switch_device = sec_device_find("switch");
-#endif
 #ifdef CONFIG_TEMP
 	mutex_init(&muic_pdata->sysfs_mutex);
 #endif

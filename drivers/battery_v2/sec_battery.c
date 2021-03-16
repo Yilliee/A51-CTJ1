@@ -54,22 +54,16 @@ static enum power_supply_property sec_battery_props[] = {
 
 static enum power_supply_property sec_power_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
-	POWER_SUPPLY_PROP_VOLTAGE_MAX,
-	POWER_SUPPLY_PROP_CURRENT_MAX,
 };
 
 static enum power_supply_property sec_wireless_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 	POWER_SUPPLY_PROP_PRESENT,
-	POWER_SUPPLY_PROP_VOLTAGE_MAX,
-	POWER_SUPPLY_PROP_CURRENT_MAX,
 };
 
 static enum power_supply_property sec_ac_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 	POWER_SUPPLY_PROP_TEMP,
-	POWER_SUPPLY_PROP_VOLTAGE_MAX,
-	POWER_SUPPLY_PROP_CURRENT_MAX,
 };
 
 static enum power_supply_property sec_ps_props[] = {
@@ -2023,6 +2017,7 @@ skip_swelling_check:
 static bool sec_bat_set_aging_step(struct sec_battery_info *battery, int step)
 {
 	union power_supply_propval value = {0, };
+	int property_type = POWER_SUPPLY_PROP_CAPACITY_LEVEL;
 
 	if (battery->pdata->num_age_step <= 0 || step < 0 || step >= battery->pdata->num_age_step) {
 		pr_info("%s: [AGE] abnormal age step : %d/%d\n",
@@ -2055,9 +2050,20 @@ static bool sec_bat_set_aging_step(struct sec_battery_info *battery, int step)
 	battery->pdata->full_condition_vcell =
 		battery->pdata->age_data[battery->pdata->age_step].full_condition_vcell;
 
-	value.intval = battery->pdata->full_condition_soc;
-	psy_do_property(battery->pdata->fuelgauge_name, set,
-		POWER_SUPPLY_PROP_CAPACITY_LEVEL, value);
+	psy_do_property(battery->pdata->fuelgauge_name, get,
+		POWER_SUPPLY_PROP_MODEL_NAME, value);
+	switch (value.intval) {
+	case IC_TYPE_IFPMIC_S2MU106:
+		value.intval = battery->pdata->age_step;
+		property_type = POWER_SUPPLY_EXT_PROP_UPDATE_BATTERY_DATA;
+		break;
+	case IC_TYPE_IFPMIC_SM5713:
+	case IC_TYPE_UNKNOWN:
+	default:
+		value.intval = battery->pdata->full_condition_soc;
+		break;
+	}
+	psy_do_property(battery->pdata->fuelgauge_name, set, property_type, value);
 
 #if defined(CONFIG_STEP_CHARGING)
 	sec_bat_set_aging_info_step_charging(battery);
@@ -5981,20 +5987,8 @@ static int sec_usb_get_property(struct power_supply *psy,
 {
 	struct sec_battery_info *battery = power_supply_get_drvdata(psy);
 
-	switch (psp) {
-	case POWER_SUPPLY_PROP_ONLINE:
-		break;
-	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
-		/* V -> uV */
-		val->intval = battery->input_voltage * 1000000;
-		return 0;
-	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		/* mA -> uA */
-		val->intval = battery->pdata->charging_current[battery->cable_type].input_current_limit * 1000;
-		return 0;
-	default:
+	if (psp != POWER_SUPPLY_PROP_ONLINE)
 		return -EINVAL;
-	}
 
 	if ((battery->health == POWER_SUPPLY_HEALTH_OVERVOLTAGE) ||
 		(battery->health == POWER_SUPPLY_HEALTH_UNDERVOLTAGE)) {
@@ -6068,14 +6062,6 @@ static int sec_ac_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = battery->chg_temp;
 		break;
-	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
-		/* V -> uV */
-		val->intval = battery->input_voltage * 1000000;
-		return 0;
-	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		/* mA -> uA */
-		val->intval = battery->pdata->charging_current[battery->cable_type].input_current_limit * 1000;
-		return 0;
 	case POWER_SUPPLY_PROP_MAX ... POWER_SUPPLY_EXT_PROP_MAX:
 		switch (ext_psp) {
 			case POWER_SUPPLY_EXT_PROP_WATER_DETECT:
@@ -6124,14 +6110,6 @@ static int sec_wireless_get_property(struct power_supply *psy,
 		else
 			val->intval = 0;
 		break;
-	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
-		/* V -> uV */
-		val->intval = battery->input_voltage * 1000000;
-		return 0;
-	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		/* mA -> uA */
-		val->intval = battery->pdata->charging_current[battery->cable_type].input_current_limit * 1000;
-		return 0;
 	default:
 		return -EINVAL;
 	}
@@ -6541,7 +6519,10 @@ static int sec_bat_cable_check(struct sec_battery_info *battery,
 	int current_cable_type = -1;
 	union power_supply_propval val = {0, };
 
-	pr_info("[%s]ATTACHED(%d)\n", __func__, attached_dev);
+	psy_do_property(battery->pdata->charger_name, get,
+		POWER_SUPPLY_PROP_MODEL_NAME, val);
+	pr_info("[%s]ATTACHED(%d) - model type(%d)\n",
+		__func__, attached_dev, val.intval);
 
 	switch (attached_dev)
 	{
@@ -6579,11 +6560,15 @@ static int sec_bat_cable_check(struct sec_battery_info *battery,
 	case ATTACHED_DEV_UNOFFICIAL_ID_USB_MUIC:
 		current_cable_type = SEC_BATTERY_CABLE_USB;
 		break;
-	case ATTACHED_DEV_JIG_UART_ON_VB_MUIC:
 	case ATTACHED_DEV_JIG_UART_OFF_VB_MUIC:
+		if (val.intval == IC_TYPE_IFPMIC_S2MU106) {
+			current_cable_type = SEC_BATTERY_CABLE_NONE;
+			break;
+		}
+	case ATTACHED_DEV_JIG_UART_ON_VB_MUIC:
 	case ATTACHED_DEV_JIG_UART_OFF_VB_FG_MUIC:
-		current_cable_type = factory_mode ? SEC_BATTERY_CABLE_NONE :
-			SEC_BATTERY_CABLE_UARTOFF;
+		current_cable_type = (battery->factory_mode_boot_on) ?
+			SEC_BATTERY_CABLE_NONE : SEC_BATTERY_CABLE_UARTOFF;
 		if (battery->block_water_event) {
 			current_cable_type = SEC_BATTERY_CABLE_UARTOFF;
 			break;
@@ -6682,6 +6667,37 @@ static int sec_bat_cable_check(struct sec_battery_info *battery,
 	if (battery->is_jig_on && !battery->pdata->support_fgsrc_change)
 		psy_do_property(battery->pdata->fuelgauge_name, set,
 			POWER_SUPPLY_PROP_ENERGY_NOW, val);
+
+	if (val.intval == IC_TYPE_IFPMIC_S2MU106) {
+		switch (attached_dev) {
+		case ATTACHED_DEV_JIG_USB_ON_MUIC:
+		case ATTACHED_DEV_JIG_UART_OFF_VB_MUIC:
+			val.intval = 1;
+			if (!battery->factory_mode_boot_on)
+				factory_mode = 1;
+			psy_do_property(battery->pdata->charger_name, set,
+				POWER_SUPPLY_PROP_ENERGY_NOW, val);
+			pr_err("%s : FACTORY MODE TEST! (%d, %d)\n", __func__, val.intval,
+				battery->factory_mode_boot_on);
+			break;
+		case ATTACHED_DEV_JIG_UART_ON_VB_MUIC:
+			val.intval = 0;
+			if (!battery->factory_mode_boot_on)
+				factory_mode = 0;
+			psy_do_property(battery->pdata->charger_name, set,
+				POWER_SUPPLY_PROP_ENERGY_NOW, val);
+			pr_err("%s : FACTORY MODE TEST! (%d, %d)\n", __func__, val.intval,
+				battery->factory_mode_boot_on);
+			break;
+		case ATTACHED_DEV_JIG_UART_OFF_MUIC:
+			psy_do_property(battery->pdata->charger_name, set,
+				POWER_SUPPLY_EXT_PROP_ENABLE_HW_FACTORY_MODE, val);
+			pr_err("%s : HW FACTORY MODE ENABLE TEST! (%d)\n", __func__, val.intval);
+			break;
+		default:
+			break;
+		}
+	}
 
 	return current_cable_type;
 }
@@ -7337,7 +7353,7 @@ static int batt_handle_notification(struct notifier_block *nb,
 				(battery->muic_cable_type == ATTACHED_DEV_JIG_USB_ON_MUIC ? BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE : 0);
 	}
 #endif
-	block_water_event |= (battery->muic_cable_type == ATTACHED_DEV_UNDEFINED_RANGE_MUIC ? BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE : 0);
+	block_water_event |= (battery->muic_cable_type == ATTACHED_DEV_UNDEFINED_RANGE_MUIC) ? BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE : 0);
 	sec_bat_set_misc_event(battery, block_water_event, BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE);
 
 	if (battery->muic_cable_type == ATTACHED_DEV_HICCUP_MUIC) {
@@ -7882,6 +7898,11 @@ static int sec_battery_probe(struct platform_device *pdev)
 		sleep_mode = true;
 	else
 		sleep_mode = false;
+
+	if (factory_mode)
+		battery->factory_mode_boot_on = true;
+	else
+		battery->factory_mode_boot_on = false;
 
 	/* '1' means disable usb temp check & high temp/highlimit temp */
 	if (temp_control_test == '1')

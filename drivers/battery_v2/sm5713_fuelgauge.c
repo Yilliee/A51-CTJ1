@@ -104,7 +104,7 @@ static void sm5713_fg_periodic_read(struct sm5713_fuelgauge_data *fuelgauge)
 			data[0x08], data[0x09], data[0x0a], data[0x0b],
 			data[0x0c], data[0x0d], data[0x0e], data[0x0f]);
 		if (!fuelgauge->initial_update_of_soc) {
-			usleep_range(1000, 2000);
+			mdelay(1); /* it has to call mdelay */
 		}
 	}
 
@@ -1688,7 +1688,7 @@ static int sm5713_fg_set_jig_mode_real_vbat(struct sm5713_fuelgauge_data *fuelga
 	}
 
 	/** meas_mode = 0 is inbat mode with jig **/
-	if (meas_mode == 0)	{
+	if (meas_mode == SEC_BAT_INBAT_FGSRC_SWITCHING_VBAT) {
 		stat = sm5713_read_word(fuelgauge->i2c, SM5713_FG_REG_AUX_STAT);
 		if (stat & 0x0002) {
 			fuelgauge->isjigmoderealvbat = true;
@@ -2434,6 +2434,9 @@ static int sm5713_fg_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CAPACITY_LEVEL:
 		return -ENODATA;
 #endif
+	case POWER_SUPPLY_PROP_MODEL_NAME:
+		val->intval = IC_TYPE_IFPMIC_SM5713;
+		break;
 	case POWER_SUPPLY_PROP_MAX ... POWER_SUPPLY_EXT_PROP_MAX:
 		switch (ext_psp) {
 		case POWER_SUPPLY_EXT_PROP_JIG_GPIO:
@@ -2444,10 +2447,6 @@ static int sm5713_fg_get_property(struct power_supply *psy,
 			pr_info("%s: jig gpio = %d \n", __func__, val->intval);
 			break;
 		case POWER_SUPPLY_EXT_PROP_MEASURE_SYS:
-			/* not supported */
-			val->intval = 0;
-			break;
-		case POWER_SUPPLY_EXT_PROP_VOLT_SLOPE:
 			val->intval = (sm5713_read_word(fuelgauge->i2c, SM5713_FG_REG_VOLT_CAL) & 0xFF00);
 			pr_info("%s: VOLT SLOPE = 0x%x \n", __func__, val->intval);
 			break;
@@ -2573,7 +2572,7 @@ static int sm5713_fg_set_property(struct power_supply *psy,
 #endif
 	case POWER_SUPPLY_PROP_MAX ... POWER_SUPPLY_EXT_PROP_MAX:
 		switch (ext_psp) {
-		case POWER_SUPPLY_EXT_PROP_INBAT_VOLTAGE_FGSRC_SWITCHING:
+		case POWER_SUPPLY_EXT_PROP_FGSRC_SWITCHING:
 			sm5713_fg_set_jig_mode_real_vbat(fuelgauge, val->intval);
 			break;
 		case POWER_SUPPLY_EXT_PROP_FUELGAUGE_FACTORY:

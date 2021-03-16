@@ -289,7 +289,7 @@ static void chub_log_auto_save_open(struct log_buffer_info *info)
 
 	/* close previous */
 	if (info->filp && !IS_ERR(info->filp)) {
-		dev_info(info->dev, "%s closing previous file\n", __func__);
+		dev_info(info->dev, "%s closing previous file %p\n", __func__, info->filp);
 		filp_close(info->filp, current->files);
 		}
 
@@ -319,7 +319,8 @@ static void chub_log_auto_save_ctrl(struct log_buffer_info *info, u32 event)
 		info->filp = NULL;
 	}
 
-	pr_info("%s: %s, %d\n", __func__, info->save_file_name, log_auto_save);
+	pr_info("%s: %s, %d, %p\n", __func__, info->save_file_name,
+		log_auto_save, info->filp);
 }
 
 static ssize_t chub_log_save_show(struct device *kobj,
@@ -387,7 +388,7 @@ static void log_dump(struct log_buffer_info *info, int err)
 
 	filp = filp_open(save_file_name, O_RDWR | O_TRUNC | O_CREAT, S_IRWUG);
 	if (IS_ERR(filp)) {
-		dev_warn(info->dev, "%s: fails\n", __func__);
+		dev_warn(info->dev, "%s: fails filp:%p\n", __func__, filp);
 		goto out;
 	}
 
@@ -400,8 +401,9 @@ static void log_dump(struct log_buffer_info *info, int err)
 		int bottom = 0;
 
 		/* dump sram-log buffer to fs (eq ~ eq + logbuf_size) */
-		dev_dbg(info->dev, "%s: eq:%d, dq:%d, size:%d, loop:%d\n", __func__,
-			wrap_index, buffer->index_reader, buffer->size, (buffer->size / TMP_BUFFER_SIZE) + 1);
+		dev_dbg(info->dev, "%s: logbuf:%p, eq:%d, dq:%d, size:%d, loop:%d\n", __func__,
+			(void *)buffer, wrap_index,	buffer->index_reader, buffer->size,
+			(buffer->size / TMP_BUFFER_SIZE) + 1);
 		for (i = 0; i < (buffer->size / TMP_BUFFER_SIZE) + 1;
 		     i++, start_index += TMP_BUFFER_SIZE) {
 			if (start_index + TMP_BUFFER_SIZE > buffer->size) {
@@ -528,8 +530,9 @@ struct log_buffer_info *log_register_buffer(struct device *dev, int id,
 	info->save_file_name[0] = '\0';
 	info->filp = NULL;
 
-	dev_info(dev, "%s with buffer size %d. kernel buffer size %d\n",
-		 __func__, buffer->size, SIZE_OF_BUFFER);
+	dev_info(dev, "%s with %p buffer size %d. %p kernel buffer size %d\n",
+		 __func__, buffer->buffer, buffer->size,
+		 info->kernel_buffer.buffer, SIZE_OF_BUFFER);
 
 	debugfs_create_file(name, S_IRWUG, chub_dbg_get_root_dir(), info,
 			    &log_fops);

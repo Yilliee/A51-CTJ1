@@ -108,10 +108,8 @@ u32 *mifmboxman_get_mbox_ptr(struct mifmboxman *mbox,  struct scsc_mif_abs *mif_
 int mifmboxman_deinit(struct mifmboxman *mbox)
 {
 	mutex_lock(&mbox->lock);
-	if (!mbox->in_use) {
-		mutex_unlock(&mbox->lock);
+	if (!mbox->in_use)
 		return -ENODEV;
-	}
 	mbox->in_use = false;
 	mutex_unlock(&mbox->lock);
 	return 0;

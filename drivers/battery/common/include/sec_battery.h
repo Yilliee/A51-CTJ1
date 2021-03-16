@@ -219,8 +219,6 @@ enum VOTER_ENUM {
 #define HV_CHARGER_STATUS_STANDARD1	12000 /* mW */
 #define HV_CHARGER_STATUS_STANDARD2	20000 /* mW */
 #define HV_CHARGER_STATUS_STANDARD3 24500 /* mW */
-#define HV_CHARGER_STATUS_STANDARD4 40000 /* mW */
-
 enum {
 	NORMAL_TA,
 	AFC_9V_OR_15W,
@@ -401,6 +399,14 @@ typedef struct sec_battery_platform_data {
 #endif
 	unsigned int swelling_high_rechg_voltage;
 	unsigned int swelling_low_rechg_voltage;
+
+#if defined(CONFIG_CALC_TIME_TO_FULL)
+	unsigned int ttf_hv_12v_charge_current;
+	unsigned int ttf_hv_charge_current;
+	unsigned int ttf_hv_12v_wireless_charge_current;
+	unsigned int ttf_hv_wireless_charge_current;
+	unsigned int ttf_wireless_charge_current;
+#endif
 
 #if defined(CONFIG_STEP_CHARGING)
 	/* step charging */
@@ -753,12 +759,9 @@ typedef struct sec_battery_platform_data {
 	unsigned int adc_type[];
 } sec_battery_platform_data_t;
 
-struct sec_ttf_data;
-
 struct sec_battery_info {
 	struct device *dev;
 	sec_battery_platform_data_t *pdata;
-	struct sec_ttf_data *ttf_d;
 
 	/* power supply used in Android */
 	struct power_supply *psy_bat;
@@ -1074,6 +1077,10 @@ struct sec_battery_info {
 #if defined(CONFIG_AFC_CHARGER_MODE)
 	char *hv_chg_name;
 #endif
+#if defined(CONFIG_CALC_TIME_TO_FULL)
+	int timetofull;
+	struct delayed_work timetofull_work;
+#endif
 #if defined(CONFIG_WIRELESS_TX_MODE)
 	int tx_avg_curr;
 	int tx_time_cnt;
@@ -1246,6 +1253,5 @@ void sec_bat_parse_mode_dt_work(struct work_struct *work);
 #if defined(CONFIG_BATTERY_AGE_FORECAST)
 void sec_bat_check_battery_health(struct sec_battery_info *battery);
 #endif
-bool sec_bat_hv_wc_normal_mode_check(struct sec_battery_info *battery);
 
 #endif /* __SEC_BATTERY_H */

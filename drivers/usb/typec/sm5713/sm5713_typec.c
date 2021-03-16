@@ -43,6 +43,8 @@
 #include <linux/battery/battery_notifier.h>
 #endif
 
+#define I2C_RETRY_CNT	3
+
 #if defined(CONFIG_CCIC_NOTIFIER)
 static enum ccic_sysfs_property sm5713_sysfs_properties[] = {
 	CCIC_SYSFS_PROP_CHIP_NAME,
@@ -77,13 +79,18 @@ static int sm5713_usbpd_reg_init(struct sm5713_phydrv_data *_data);
 
 static int sm5713_usbpd_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest)
 {
-	int ret;
+	int ret, i;
 	struct device *dev = &i2c->dev;
 #if defined(CONFIG_USB_HW_PARAM)
 	struct otg_notify *o_notify = get_otg_notify();
 #endif
 
-	ret = i2c_smbus_read_byte_data(i2c, reg);
+	for (i = 0; i < I2C_RETRY_CNT; i++) {
+		ret = i2c_smbus_read_byte_data(i2c, reg);
+		if (ret >= 0)
+			break;
+		pr_info("%s reg(0x%x), ret(%d)\n", __func__, reg, ret);
+	}
 	if (ret < 0) {
 #if defined(CONFIG_USB_HW_PARAM)
 		if (o_notify)
@@ -99,13 +106,18 @@ static int sm5713_usbpd_read_reg(struct i2c_client *i2c, u8 reg, u8 *dest)
 
 static int sm5713_usbpd_write_reg(struct i2c_client *i2c, u8 reg, u8 value)
 {
-	int ret;
+	int ret, i;
 	struct device *dev = &i2c->dev;
 #if defined(CONFIG_USB_HW_PARAM)
 	struct otg_notify *o_notify = get_otg_notify();
 #endif
 
-	ret = i2c_smbus_write_byte_data(i2c, reg, value);
+	for (i = 0; i < I2C_RETRY_CNT; i++) {
+		ret = i2c_smbus_write_byte_data(i2c, reg, value);
+		if (ret >= 0)
+			break;
+		pr_info("%s reg(0x%x), ret(%d)\n", __func__, reg, ret);
+	}
 	if (ret < 0) {
 #if defined(CONFIG_USB_HW_PARAM)
 		if (o_notify)
@@ -119,13 +131,18 @@ static int sm5713_usbpd_write_reg(struct i2c_client *i2c, u8 reg, u8 value)
 static int sm5713_usbpd_multi_read(struct i2c_client *i2c,
 		u8 reg, int count, u8 *buf)
 {
-	int ret;
+	int ret, i;
 	struct device *dev = &i2c->dev;
 #if defined(CONFIG_USB_HW_PARAM)
 	struct otg_notify *o_notify = get_otg_notify();
 #endif
 
-	ret = i2c_smbus_read_i2c_block_data(i2c, reg, count, buf);
+	for (i = 0; i < I2C_RETRY_CNT; i++) {
+		ret = i2c_smbus_read_i2c_block_data(i2c, reg, count, buf);
+		if (ret >= 0)
+			break;
+		pr_info("%s reg(0x%x), ret(%d)\n", __func__, reg, ret);
+	}
 	if (ret < 0) {
 #if defined(CONFIG_USB_HW_PARAM)
 		if (o_notify)
@@ -140,13 +157,18 @@ static int sm5713_usbpd_multi_read(struct i2c_client *i2c,
 static int sm5713_usbpd_multi_write(struct i2c_client *i2c,
 		u8 reg, int count, u8 *buf)
 {
-	int ret;
+	int ret, i;
 	struct device *dev = &i2c->dev;
 #if defined(CONFIG_USB_HW_PARAM)
 	struct otg_notify *o_notify = get_otg_notify();
 #endif
 
-	ret = i2c_smbus_write_i2c_block_data(i2c, reg, count, buf);
+	for (i = 0; i < I2C_RETRY_CNT; i++) {
+		ret = i2c_smbus_write_i2c_block_data(i2c, reg, count, buf);
+		if (ret >= 0)
+			break;
+		pr_info("%s reg(0x%x), ret(%d)\n", __func__, reg, ret);
+	}
 	if (ret < 0) {
 #if defined(CONFIG_USB_HW_PARAM)
 		if (o_notify)

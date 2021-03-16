@@ -554,22 +554,17 @@ static void set_unique_rndis_mac_address(
 #endif
 
 #ifdef CONFIG_USB_CONFIGFS_UEVENT
-static int check_symboliclink_change_mode (struct config_usb_cfg *cfg)
+static bool is_symboliclink_change_mode(struct config_usb_cfg *cfg)
 {
 	struct gadget_config_name *cn;
 
 	if (!list_empty(&cfg->string_list)) {
 		list_for_each_entry(cn, &cfg->string_list, list) {
-			if (strcmp(cn->configuration, "Conf 1") != 0) {
-				if (strcmp(cn->configuration, "adb") == 0
-					|| strcmp(cn->configuration, "fastboot") == 0) 
-					return USB_MODE_FOR_VTS_ADB;
-				else
-					return USB_MODE_FOR_VTS_MTP;
-			}
+			if (strcmp(cn->configuration, "Conf 1") != 0)
+				return true;
 		}
 	}
-	return USB_MODE_FOR_SEC;
+	return false;
 }
 
 static struct usb_function *get_adb_function_from_linked_func(struct gadget_info *gi)
@@ -624,9 +619,7 @@ static int config_usb_cfg_link(
 			struct usb_function_instance, group);
 	struct usb_function_instance *a_fi;
 	struct usb_function *f;
-#ifdef CONFIG_USB_CONFIGFS_UEVENT
-	int is_vts_mtp = 0;
-#endif
+
 	int ret;
 
 	mutex_lock(&gi->lock);
@@ -661,10 +654,6 @@ static int config_usb_cfg_link(
 				}
 				goto out;
 			} else {
-				is_vts_mtp = check_symboliclink_change_mode(cfg);
-				if (is_vts_mtp == USB_MODE_FOR_VTS_MTP)
-					goto out;
-
 				ret = make_adb_connection_for_gsi(cfg, fi);
 				cfg->c.next_interface_id = 0;
 				goto out;
@@ -683,12 +672,8 @@ static int config_usb_cfg_link(
 #endif
 #ifdef CONFIG_USB_CONFIGFS_UEVENT
 	/* Go through all configs, attach all functions */
-	is_vts_mtp = check_symboliclink_change_mode(cfg);
-	if (is_vts_mtp) {
+	if (is_symboliclink_change_mode(cfg)) {
 		gi->symboliclink_change_mode = 1;
-		if (is_vts_mtp == USB_MODE_FOR_VTS_MTP)
-			goto out;
-
 		if (list_empty(&gi->linked_func)) {
 			pr_info("usb: %s : add cfg func_list~\n", __func__);
 			f = usb_get_function(fi);

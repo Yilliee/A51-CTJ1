@@ -17,7 +17,7 @@ ifneq ($(CONFIG_SOC_EXYNOS7885),)
     ccflags-$(CONFIG_ICD_USE_TZDEV) += -Idrivers/misc/tzdev
   endif
 else
-ccflags-$(CONFIG_ICD_USE_TZDEV) += -Idrivers/misc/tzdev
+  ccflags-$(CONFIG_ICD_USE_TZDEV) += -Idrivers/misc/tzdev
 endif
 
 ifneq (,$(filter $(CONFIG_MTK_PLATFORM), "mt6768"))

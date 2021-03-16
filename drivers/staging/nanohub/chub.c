@@ -58,7 +58,11 @@ enum { C2A_ON, C2A_OFF };
 static DEFINE_MUTEX(reset_mutex);
 static DEFINE_MUTEX(pmu_shutdown_mutex);
 
+#ifdef CONFIG_SENSORS_SSP
+int contexthub_get_token(struct contexthub_ipc_info *ipc)
+#else
 static int contexthub_get_token(struct contexthub_ipc_info *ipc)
+#endif
 {
 	if (atomic_read(&ipc->in_reset))
 		return -EINVAL;
@@ -67,7 +71,11 @@ static int contexthub_get_token(struct contexthub_ipc_info *ipc)
 	return 0;
 }
 
+#ifdef CONFIG_SENSORS_SSP
+void contexthub_put_token(struct contexthub_ipc_info *ipc)
+#else
 static void contexthub_put_token(struct contexthub_ipc_info *ipc)
+#endif
 {
 	atomic_dec(&ipc->in_use_ipc);
 }
@@ -335,7 +343,7 @@ static void contexthub_handle_debug(struct contexthub_ipc_info *ipc,
 		__func__, err, ipc->err_cnt[err], enable_wq);
 
 	if (err < CHUB_ERR_NEED_RESET) {
-		if (ipc->err_cnt[err] > CHUB_RESET_THOLD) {
+		if (err < CHUB_ERR_CRITICAL || ipc->err_cnt[err] > CHUB_RESET_THOLD) {
 			atomic_set(&ipc->chub_status, CHUB_ST_ERR);
 			ipc->err_cnt[err] = 0;
 			dev_info(ipc->dev, "%s: err:%d(cnt:%d), enter error status\n",

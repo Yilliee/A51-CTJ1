@@ -479,6 +479,7 @@ struct sec_battery_info {
 	/* test mode */
 	int test_mode;
 	bool factory_mode;
+	bool factory_mode_boot_on;
 	bool store_mode;
 
 	/* usb suspend */

@@ -52,6 +52,7 @@ enum
 #define RESET_REASON_KERNEL_RESET            0x01
 #define RESET_REASON_MCU_CRASHED             0x02
 #define RESET_REASON_SYSFS_REQUEST           0x03
+#define RESET_REASON_HUB_REQUEST             0x04
 
 static int ssp_preenable(struct iio_dev *indio_dev)
 {
@@ -356,12 +357,12 @@ void report_scontext_notice_data(struct ssp_data *data, char notice)
 	notice_buf[2] = notice;
 	if (notice == SCONTEXT_AP_STATUS_RESET) {
 		len = 4;
-		if (data->is_reset_from_sysfs == true) {
+		if (data->reset_type == RESET_TYPE_KERNEL_SYSFS) {
 			notice_buf[3] = RESET_REASON_SYSFS_REQUEST;
-			data->is_reset_from_sysfs = false;
-		} else if (data->is_reset_from_kernel == true) {
+		} else if (data->reset_type == RESET_TYPE_KERNEL_COM_FAIL) {
 			notice_buf[3] = RESET_REASON_KERNEL_RESET;
-			data->is_reset_from_kernel = false;
+		} else if (data->reset_type == RESET_TYPE_HUB_NO_EVENT) {
+			notice_buf[3] = RESET_REASON_HUB_REQUEST;
 		} else {
 			notice_buf[3] = RESET_REASON_MCU_CRASHED;
 		}
@@ -378,6 +379,13 @@ void report_scontext_notice_data(struct ssp_data *data, char notice)
 	} else {
 		ssp_errf("invalid notice(0x%x)", notice);
 	}
+}
+
+void report_sensorhub_data(struct ssp_data *data, char* buf)
+{
+	ssp_infof();
+	ssp_iio_push_buffers(data->indio_devs[SENSOR_TYPE_SENSORHUB], get_current_timestamp(),
+							buf, data->info[SENSOR_TYPE_SENSORHUB].report_data_len);
 }
 
 static void *init_indio_device(struct device *dev, struct ssp_data *data,

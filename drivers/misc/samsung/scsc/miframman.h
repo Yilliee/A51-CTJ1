@@ -24,12 +24,7 @@ void miframman_deinit(struct miframman *ram);
 void miframabox_deinit(struct mifabox *mifabox);
 void miframman_log(struct miframman *ram, struct seq_file *fd);
 
-#if defined(CONFIG_SOC_EXYNOS3830) || defined(CONFIG_SOC_EXYNOS7885)
-#define MIFRAMMAN_MAXMEM                (12 * 1024 * 1024)
-#else
-#define MIFRAMMAN_MAXMEM                (16 * 1024 * 1024)
-#endif
-
+#define MIFRAMMAN_MAXMEM        (16 * 1024 * 1024)
 #define MIFRAMMAN_BLOCK_SIZE    (64)
 
 #define MIFRAMMAN_NUM_BLOCKS    ((MIFRAMMAN_MAXMEM) / (MIFRAMMAN_BLOCK_SIZE))

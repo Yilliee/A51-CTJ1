@@ -163,8 +163,6 @@ struct platform_mif {
 	void *suspendresume_data;
 };
 
-inline void platform_int_debug(struct platform_mif *platform);
-
 extern int mx140_log_dump(void);
 
 #define platform_mif_from_mif_abs(MIF_ABS_PTR) container_of(MIF_ABS_PTR, struct platform_mif, interface)
@@ -584,10 +582,10 @@ irqreturn_t platform_wdog_isr(int irq, void *data)
 	int ret = 0;
 	struct platform_mif *platform = (struct platform_mif *)data;
 
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INT received %d\n", irq);
-	platform_int_debug(platform);
-
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INT received\n");
 	if (platform->reset_request_handler != platform_mif_irq_reset_request_default_handler) {
+		disable_irq_nosync(platform->wlbt_irq[PLATFORM_MIF_WDOG].irq_num);
+		platform->reset_request_handler(irq, platform->irq_reset_request_dev);
 		if (platform->boot_state == WLBT_BOOT_WAIT_CFG_REQ) {
 			/* Spurious interrupt from the SOC during CFG_REQ phase, just consume it */
 			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "Spurious wdog irq during cfg_req phase\n");
@@ -1601,40 +1599,17 @@ static void platform_mif_dump_register(struct scsc_mif_abs *interface)
 	spin_lock_irqsave(&platform->mif_spinlock, flags);
 
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTGR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTGR0)));
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTCR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTCR0)));
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMR0)));
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTSR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTSR0)));
-	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMSR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMSR0)));
-
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTGR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTGR1)));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTCR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTCR0)));
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTCR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTCR1)));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMR0)));
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMR1)));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTSR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTSR0)));
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTSR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTSR1)));
+	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMSR0 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMSR0)));
 	SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "INTMSR1 0x%08x\n", platform_mif_reg_read(platform, MAILBOX_WLBT_REG(INTMSR1)));
 
 	spin_unlock_irqrestore(&platform->mif_spinlock, flags);
-}
-
-inline void platform_int_debug(struct platform_mif *platform)
-{
-	int i;
-	int irq;
-	int ret;
-	bool pending, active, masked;
-	int irqs[] = {PLATFORM_MIF_MBOX, PLATFORM_MIF_WDOG};
-	char *irqs_name[] = {"MBOX", "WDOG"};
-
-	for (i = 0; i < (sizeof(irqs) / sizeof(int)); i++) {
-		irq = platform->wlbt_irq[irqs[i]].irq_num;
-
-		ret  = irq_get_irqchip_state(irq, IRQCHIP_STATE_PENDING, &pending);
-		ret |= irq_get_irqchip_state(irq, IRQCHIP_STATE_ACTIVE,  &active);
-		ret |= irq_get_irqchip_state(irq, IRQCHIP_STATE_MASKED,  &masked);
-		if (!ret)
-			SCSC_TAG_INFO_DEV(PLAT_MIF, platform->dev, "IRQCHIP_STATE %d(%s): pending %d, active %d, masked %d",
-							  irq, irqs_name[i], pending, active, masked);
-	}
-	platform_mif_dump_register(&platform->interface);
 }
 
 static void platform_mif_cleanup(struct scsc_mif_abs *interface)

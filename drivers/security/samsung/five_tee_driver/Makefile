@@ -1,63 +1,68 @@
 #
 # Integrity TEE Driver
 #
-FIVE_TEE_DRIVER_PATH := $(srctree)/drivers/security/samsung/five_tee_driver
 TEEC_CLIENT_PATH := multibuild/source/gp-api/client
 PROTOCOL_PATH := multibuild/source/gp-api/protocol
+FIVE_TEE_DRIVER_PATH := drivers/security/samsung/five_tee_driver
 
-obj-$(CONFIG_FIVE_TEE_DRIVER) += five_tee_driver.o
+obj-$(CONFIG_FIVE_TEE_DRIVER) += itee_driver.o
 
-ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -I$(srctree)/security/samsung/five \
+itee_driver-objs += five_tee_driver.o
+
+ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Isecurity/samsung/five \
                                      -I$(FIVE_TEE_DRIVER_PATH)/$(PROTOCOL_PATH) \
                                      -I$(FIVE_TEE_DRIVER_PATH)/$(TEEC_CLIENT_PATH)
 
-# Emulator
-obj-$(CONFIG_FIVE_USE_EMULATOR) += $(TEEC_CLIENT_PATH)/tee_client_api.o \
-                                   $(PROTOCOL_PATH)/teec_param_utils.o \
-                                   $(TEEC_CLIENT_PATH)/teec_common_emulator.o \
-                                   $(TEEC_CLIENT_PATH)/teec_operation.o \
-                                   $(PROTOCOL_PATH)/socket_utils.o
-ccflags-$(CONFIG_FIVE_USE_EMULATOR) += -I$(FIVE_TEE_DRIVER_PATH)/multibuild/include/gp-api
+ccflags-$(CONFIG_FIVE_USE_TRUSTONIC) += -DCONFIG_TRUSTONIC
+ccflags-$(CONFIG_FIVE_USE_TZDEV) += -DCONFIG_TEEGRIS
+ccflags-$(CONFIG_FIVE_USE_QSEE) += -DCONFIG_QSEE
 
 # Trustonic
 obj-$(CONFIG_FIVE_USE_TRUSTONIC) += $(TEEC_CLIENT_PATH)/tee_client_api.o \
                                     $(PROTOCOL_PATH)/teec_param_utils.o \
                                     $(TEEC_CLIENT_PATH)/teec_common_tbase.o \
-                                    $(TEEC_CLIENT_PATH)/teec_operation.o
+                                    $(TEEC_CLIENT_PATH)/teec_operation_tbase.o \
+                                    $(TEEC_CLIENT_PATH)/tee_client_api.o
 
 ccflags-$(CONFIG_FIVE_USE_TRUSTONIC) += -I$(FIVE_TEE_DRIVER_PATH)/multibuild/include/gp-api
 ifeq ($(CONFIG_FIVE_USE_TRUSTONIC), y)
-  ifeq ($(CONFIG_MACH_MT6768), y)
+  ifeq ($(CONFIG_SOC_EXYNOS7570), y)
+    PLATFORM := exynos7570
+    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver
+    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver/public
+  else ifeq ($(CONFIG_SOC_EXYNOS7870), y)
+    PLATFORM := exynos7870
+    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver
+    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver/public
+  else ifeq ($(CONFIG_SOC_EXYNOS7885), y)
+    PLATFORM := exynos7885
+    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver
+    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver/public
+  else ifeq ($(CONFIG_SOC_EXYNOS9810), y)
+    PLATFORM := exynos9810
+    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver
+    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver/public
+  else ifeq ($(CONFIG_SOC_EXYNOS9820), y)
+    PLATFORM := exynos9820
+    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver
+    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver/public
+  else ifeq ($(CONFIG_SOC_EXYNOS9610), y)
+    PLATFORM := exynos9610
+    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver
+    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver/public
+  else ifeq ($(CONFIG_MACH_MT6768), y)
     ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/misc/mediatek/gud/410/MobiCoreDriver
     ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/misc/mediatek/gud/410/MobiCoreDriver/public
   else
-    ifeq ($(CONFIG_SOC_EXYNOS7570), y)
-      PLATFORM := exynos7570
-    else ifeq ($(CONFIG_SOC_EXYNOS7870), y)
-      PLATFORM := exynos7870
-    else ifeq ($(CONFIG_SOC_EXYNOS7885), y)
-      PLATFORM := exynos7885
-    else ifeq ($(CONFIG_SOC_EXYNOS9810), y)
-      PLATFORM := exynos9810
-    else ifeq ($(CONFIG_SOC_EXYNOS9820), y)
-      PLATFORM := exynos9820
-    else ifeq ($(CONFIG_SOC_EXYNOS9610), y)
-      PLATFORM := exynos9610
-    else ifeq ($(CONFIG_SOC_EXYNOS1000), y)
-      PLATFORM := exynos1000
-    else
-      $(error "Unknown SoC")
-    endif
-    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver
-    ccflags-$(CONFIG_FIVE_TEE_DRIVER) += -Idrivers/gud/gud-$(PLATFORM)/MobiCoreDriver/public
-  endif # CONFIG_MACH_MT6768
-endif # CONFIG_FIVE_USE_TRUSTONIC
+    $(error "Unknown SoC")
+  endif
+endif
 
 # QSEE
 obj-$(CONFIG_FIVE_USE_QSEE) += $(TEEC_CLIENT_PATH)/tee_client_api.o \
                                $(PROTOCOL_PATH)/teec_param_utils.o \
                                $(TEEC_CLIENT_PATH)/teec_common_qsee.o \
-                               $(TEEC_CLIENT_PATH)/teec_operation.o
+                               $(TEEC_CLIENT_PATH)/teec_operation_qsee.o
 
 ccflags-$(CONFIG_FIVE_USE_QSEE) += -I$(FIVE_TEE_DRIVER_PATH)/multibuild/include/gp-api \
                                    -Idrivers/misc
@@ -85,12 +90,10 @@ ifeq ($(use_teegris_v2), y)
   obj-$(CONFIG_FIVE_USE_TZDEV) += $(TEEC_CLIENT_PATH)/teec_common_teegris_v2.o \
                                   $(TEEC_CLIENT_PATH)/tee_client_api.o \
                                   $(PROTOCOL_PATH)/teec_param_utils.o \
-                                  $(TEEC_CLIENT_PATH)/teec_operation.o
+                                  $(TEEC_CLIENT_PATH)/teec_operation_teegris_v2.o
   ccflags-$(CONFIG_FIVE_USE_TZDEV) += -Idrivers/misc/tzdev/include \
                                       -I$(FIVE_TEE_DRIVER_PATH)/multibuild/include/gp-api
 else
   obj-$(CONFIG_FIVE_USE_TZDEV) += $(TEEC_CLIENT_PATH)/teec_operation_teegris_v3.o
   ccflags-$(CONFIG_FIVE_USE_TZDEV) += -Idrivers/misc/tzdev/include/tzdev
 endif
-
-subdir-ccflags-y := -Wformat

@@ -394,9 +394,11 @@ int sensor_module_deinit(struct v4l2_subdev *subdev)
 				err("failed to turn off flash at flash expired handler\n");
 			}
 #if defined(CONFIG_LEDS_S2MU106_FLASH)
-			pdo_ctrl_by_flash(0);
-			muic_afc_set_voltage(9);
-			info("[%s]%d Down Volatge set Clear \n" ,__func__,__LINE__);
+			if (sensor_peri->flash->id == FLADRV_NAME_S2MU106) {
+				pdo_ctrl_by_flash(0);
+				muic_afc_set_voltage(9);
+				info("[%s]%d Down Volatge set Clear \n" ,__func__,__LINE__);
+			}
 #endif
 		}
 	}

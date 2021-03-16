@@ -284,7 +284,7 @@ static void slsi_sm_bt_service_cleanup_interrupts(void)
 
 	if (bt_module_irq_mask & 1 << irq_num++)
 		scsc_service_mifintrbit_unregister_tohost(bt_service.service,
-            bt_service.bsmhcp_protocol->header.info_bg_to_ap_int_src);
+		    bt_service.bsmhcp_protocol->header.info_bg_to_ap_int_src);
 	if (bt_module_irq_mask & 1 << irq_num++)
 		scsc_service_mifintrbit_free_fromhost(bt_service.service,
 		    bt_service.bsmhcp_protocol->header.info_ap_to_bg_int_src,
@@ -448,9 +448,6 @@ static int slsi_sm_bt_service_cleanup()
 		SCSC_TAG_DEBUG(BT_COMMON,
 			"cleanup ongoing avdtp detections\n");
 		scsc_avdtp_detect_exit();
-
-		/* Report quality of service statistics */
-		scsc_bt_qos_service_stop();
 
 		mutex_lock(&bt_audio_mutex);
 #ifndef CONFIG_SOC_EXYNOS7885
@@ -2533,7 +2530,6 @@ static int __init scsc_bt_module_init(void)
 	SCSC_TAG_DEBUG(BT_COMMON, "dev=%u class=%p\n",
 			   ant_service.device, common_service.class);
 #endif
-	scsc_bt_qos_init();
 
 	return 0;
 
@@ -2598,8 +2594,6 @@ static void __exit scsc_bt_module_exit(void)
 
 	unregister_chrdev_region(ant_service.device, SCSC_TTY_MINORS);
 #endif
-
-	scsc_bt_qos_deinit();
 
 	SCSC_TAG_INFO(BT_COMMON, "exit, module unloaded\n");
 }

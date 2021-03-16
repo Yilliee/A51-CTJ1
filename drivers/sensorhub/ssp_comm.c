@@ -207,14 +207,9 @@ int ssp_send_command(struct ssp_data *data, u8 cmd, u8 type, u8 subcmd,
                      int *receive_buf_len)
 {
 	int status = 0;
-	struct ssp_msg *msg;
+	struct ssp_msg *msg = kzalloc(sizeof(*msg), GFP_KERNEL);
 	DECLARE_COMPLETION_ONSTACK(done);
 
-	if ((type < SENSOR_TYPE_MAX) && !(data->sensor_probe_state& (1ULL << type))) {
-		ssp_infof("Skip this function!, sensor is not connected(0x%llx)", data->sensor_probe_state);
-		return -ENODEV;
-	}
-	msg = kzalloc(sizeof(*msg), GFP_KERNEL);
 	msg->cmd = cmd;
 	msg->type = type;
 	msg->subcmd = subcmd;
@@ -265,7 +260,7 @@ int ssp_send_command(struct ssp_data *data, u8 cmd, u8 type, u8 subcmd,
 	//mutex_unlock(&data->cmd_mutex);
 
 	if(status < 0) {
-		recovery_mcu(data, RESET_KERNEL_COM_FAIL);
+		reset_mcu(data, RESET_TYPE_KERNEL_COM_FAIL);
 		ssp_errf("status=%d", status);
 	}
 	return status;

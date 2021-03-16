@@ -536,6 +536,9 @@ static int sm5713_chg_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
 		val->intval = charger->charge_mode;
 		break;
+	case POWER_SUPPLY_PROP_MODEL_NAME:
+		val->intval = IC_TYPE_IFPMIC_SM5713;
+		break;
 	case POWER_SUPPLY_PROP_MAX ... POWER_SUPPLY_EXT_PROP_MAX:
 		switch (ext_psp) {
 		case POWER_SUPPLY_EXT_PROP_MONITOR_WORK:

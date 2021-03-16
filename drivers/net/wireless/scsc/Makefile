@@ -55,6 +55,7 @@ scsc_wlan-$(CONFIG_SCSC_WLAN) += fw_test.o
 scsc_wlan-$(CONFIG_SCSC_WLAN) += cac.o
 scsc_wlan-$(CONFIG_SCSC_WLAN) += scsc_wifi_fcq.o
 scsc_wlan-$(CONFIG_SCSC_WLAN) += ioctl.o
+scsc_wlan-$(CONFIG_SCSC_WLAN) += wakelock.o
 scsc_wlan-$(CONFIG_SCSC_WLAN) += traffic_monitor.o
 scsc_wlan-$(CONFIG_SCSC_WLAN) += reg_info.o
 
@@ -99,6 +100,7 @@ ccflags-y += -Idrivers/misc/samsung/scsc
 # Wlan configuration
 # ----------------------------------------------------------------------------
 ccflags-$(CONFIG_SCSC_WLAN_DEBUG)                                         += -DCONFIG_SCSC_WLAN_DEBUG
+ccflags-$(CONFIG_SCSC_WLAN_SKB_TRACKING)                                  += -DCONFIG_SCSC_WLAN_SKB_TRACKING
 ccflags-$(CONFIG_SCSC_WLAN_OFFLINE_TRACE)                                 += -DCONFIG_SCSC_WLAN_OFFLINE_TRACE
 ccflags-$(CONFIG_SCSC_WLAN_OFFLINE_DATA_PLANE_PROFILE_TRACE)              += -DCONFIG_SCSC_WLAN_OFFLINE_DATA_PLANE_PROFILE_TRACE
 ccflags-$(CONFIG_SCSC_WLAN_OFFLINE_TX_TRACE)                              += -DCONFIG_SCSC_WLAN_OFFLINE_TX_TRACE
